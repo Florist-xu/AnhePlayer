@@ -52,6 +52,7 @@
         "enter_minimode": "Enter Mini Mode",
         "exit_minimode": "Exit Mini Mode",
         "nav_online": "Online",
+        "nav_mine": "Library",
         "nav_local": "Local",
         "nav_main": "Main navigation",
         "component_showcase": "Component Showcase (Dev)",

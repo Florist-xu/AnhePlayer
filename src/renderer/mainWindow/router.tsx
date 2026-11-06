@@ -18,6 +18,7 @@ import RecentlyPlayedPage from './pages/RecentlyPlayedPage';
 import PluginManagerPage from './pages/PluginManagerPage';
 import SettingPage from './pages/SettingPage';
 import ThemePage from './pages/ThemePage';
+import MobileMinePage from './pages/MobileMinePage';
 import NotFoundPage from './pages/NotFoundPage';
 
 const router = createHashRouter([
@@ -90,6 +91,12 @@ const router = createHashRouter([
             {
                 path: RoutePaths.RecentlyPlayed,
                 Component: RecentlyPlayedPage,
+            },
+
+            // ── 我的（移动端入口页；桌面端用侧边栏，不会导航到这里） ──
+            {
+                path: RoutePaths.Mine,
+                Component: MobileMinePage,
             },
 
             // ── 工具 ──

@@ -52,6 +52,7 @@
         "enter_minimode": "進入迷你模式",
         "exit_minimode": "退出迷你模式",
         "nav_online": "線上",
+        "nav_mine": "我的",
         "nav_local": "本地",
         "nav_main": "主導航",
         "component_showcase": "元件展示 (Dev)",

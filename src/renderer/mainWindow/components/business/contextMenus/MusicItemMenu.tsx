@@ -1,4 +1,5 @@
 import type { ContextMenuEntry } from '../../ui/ContextMenu';
+import { isMobile } from '@common/platform';
 import { showToast } from '../../ui/Toast';
 import { showModal } from '../../ui/Modal/modalManager';
 import trackPlayer from '@renderer/mainWindow/core/trackPlayer';
@@ -194,7 +195,8 @@ export function MusicItemMenu(ctx: MusicItemMenuContext): ContextMenuEntry[] {
         const hasLocalPath =
             typeof singleItem.localPath === 'string' && singleItem.localPath.length > 0;
 
-        if (downloaded?.path || isLocalMusic || hasLocalPath) {
+        // iOS 沙盒内无法在文件管理器中定位文件
+        if (!isMobile && (downloaded?.path || isLocalMusic || hasLocalPath)) {
             entries.push({
                 id: 'reveal-in-explorer',
                 icon: <FolderOpen />,

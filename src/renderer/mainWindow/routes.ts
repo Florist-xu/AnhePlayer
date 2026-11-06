@@ -35,6 +35,8 @@ export const RoutePaths = {
     RecentlyPlayed: 'recently-played',
     /** 插件管理 */
     PluginManager: 'plugin-manager',
+    /** 我的（移动端：歌单 / 最近播放 / 下载等入口） */
+    Mine: 'mine',
     /** 设置 */
     Setting: 'setting',
     /** 主题 */

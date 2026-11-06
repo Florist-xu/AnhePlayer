@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { isMobile } from '@common/platform';
 import { useTranslation } from 'react-i18next';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingRow } from '../components/SettingRow';
@@ -239,14 +240,17 @@ export function BackupSection() {
 
             {backupMode === 'file' ? (
                 <div className="p-setting__action-row">
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleBackupToFile}
-                        disabled={operating}
-                    >
-                        {t('settings.backup.backup_to')}
-                    </Button>
+                    {/* iOS 没有「另存为」对话框，文件备份仅桌面端提供；移动端用 WebDAV 备份 */}
+                    {!isMobile && (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleBackupToFile}
+                            disabled={operating}
+                        >
+                            {t('settings.backup.backup_to')}
+                        </Button>
+                    )}
                     <Button
                         variant="secondary"
                         size="sm"

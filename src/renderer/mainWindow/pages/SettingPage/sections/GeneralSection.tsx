@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { isMobile } from '@common/platform';
 import { useTranslation } from 'react-i18next';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingRow } from '../components/SettingRow';
@@ -61,25 +62,33 @@ export function GeneralSection() {
             title={t('settings.section_name.general')}
             subtitle={t('settings.general.subtitle')}
         >
-            <SettingRow
-                label={t('settings.general.check_update_label')}
-                description={t('settings.general.check_update_desc')}
-                control={<Toggle checked={checkUpdate ?? true} onChange={setCheckUpdate} />}
-            />
-            <SettingRow
-                label={t('settings.general.close_behavior_label')}
-                description={t('settings.general.close_behavior_desc')}
-                control={
-                    <Select
-                        value={closeBehavior ?? 'minimize'}
-                        onChange={setCloseBehavior}
-                        options={[
-                            { value: 'exit_app', label: t('settings.general.exit_app') },
-                            { value: 'minimize', label: t('settings.general.minimize_to_tray') },
-                        ]}
+            {/* 自动更新检查与关闭按钮行为仅桌面端有意义（iOS 由 TestFlight / App Store 更新） */}
+            {!isMobile && (
+                <>
+                    <SettingRow
+                        label={t('settings.general.check_update_label')}
+                        description={t('settings.general.check_update_desc')}
+                        control={<Toggle checked={checkUpdate ?? true} onChange={setCheckUpdate} />}
                     />
-                }
-            />
+                    <SettingRow
+                        label={t('settings.general.close_behavior_label')}
+                        description={t('settings.general.close_behavior_desc')}
+                        control={
+                            <Select
+                                value={closeBehavior ?? 'minimize'}
+                                onChange={setCloseBehavior}
+                                options={[
+                                    { value: 'exit_app', label: t('settings.general.exit_app') },
+                                    {
+                                        value: 'minimize',
+                                        label: t('settings.general.minimize_to_tray'),
+                                    },
+                                ]}
+                            />
+                        }
+                    />
+                </>
+            )}
             <SettingRow
                 label={t('settings.general.language_label')}
                 description={t('settings.general.language_desc')}

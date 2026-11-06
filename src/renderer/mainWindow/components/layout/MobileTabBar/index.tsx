@@ -4,7 +4,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
-import { Trophy, Flame, HardDrive, Download, Settings } from 'lucide-react';
+import { Trophy, Flame, HardDrive, Library, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@common/cn';
 import { RoutePaths } from '../../../routes';
@@ -14,8 +14,8 @@ import './index.scss';
 const TABS: { key: RoutePath; icon: LucideIcon; titleKey: string }[] = [
     { key: RoutePaths.Toplist, icon: Trophy, titleKey: 'toplist.title' },
     { key: RoutePaths.RecommendSheets, icon: Flame, titleKey: 'playlist.recommend' },
+    { key: RoutePaths.Mine, icon: Library, titleKey: 'app.nav_mine' },
     { key: RoutePaths.LocalMusic, icon: HardDrive, titleKey: 'local_music.title' },
-    { key: RoutePaths.Download, icon: Download, titleKey: 'download.title' },
     { key: RoutePaths.Setting, icon: Settings, titleKey: 'settings.title' },
 ];
 

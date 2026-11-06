@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { isMobile } from '@common/platform';
 import { useTranslation } from 'react-i18next';
 import { FolderOpen } from 'lucide-react';
 import { SettingsCard } from '../components/SettingsCard';
@@ -50,15 +51,20 @@ export function DownloadSection() {
                 control={
                     <div className="p-setting__path-picker">
                         <div className="p-setting__path-display">{effectiveDownloadPath}</div>
-                        <Button variant="secondary" size="sm" onClick={handleChoosePath}>
-                            {t('settings.download.change')}
-                        </Button>
-                        <Button
-                            variant="icon"
-                            size="sq"
-                            icon={<FolderOpen width={16} height={16} />}
-                            onClick={handleOpenPath}
-                        />
+                        {/* iOS 只能保存在 App 沙盒的 Documents 目录，不可更改或用系统程序打开 */}
+                        {!isMobile && (
+                            <>
+                                <Button variant="secondary" size="sm" onClick={handleChoosePath}>
+                                    {t('settings.download.change')}
+                                </Button>
+                                <Button
+                                    variant="icon"
+                                    size="sq"
+                                    icon={<FolderOpen width={16} height={16} />}
+                                    onClick={handleOpenPath}
+                                />
+                            </>
+                        )}
                     </div>
                 }
             />

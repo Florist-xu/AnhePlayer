@@ -4,6 +4,7 @@
 //
 // 绝对定位气泡，包含字号调节、翻译开关、下载歌词、搜索替换歌词等功能。
 
+import { isMobile } from '@common/platform';
 import { useCallback, useRef, useEffect, useState, memo, type RefObject } from 'react';
 import { Download, Search, Unlink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -214,8 +215,8 @@ export default memo(function LyricSettingsPopover({
                 />
             </div>
 
-            {/* 下载歌词 */}
-            <div className="l-fullscreen-player__settings-section">
+            {/* 下载歌词（iOS 无「另存为」对话框，移动端隐藏） */}
+            <div className="l-fullscreen-player__settings-section" hidden={isMobile}>
                 <div className="l-fullscreen-player__settings-label">
                     {t('lyric.download_lyric')}
                 </div>

@@ -87,10 +87,12 @@ export default function SettingPage() {
         [t],
     );
 
-    // 键盘快捷键在触屏设备上没有意义，移动端隐藏该分区
+    // 键盘快捷键、桌面歌词在 iOS 上不存在，移动端隐藏对应分区
     const sectionTabs = useMemo(
         () =>
-            isMobile ? allSectionTabs.filter((item) => item.key !== 'shortcuts') : allSectionTabs,
+            isMobile
+                ? allSectionTabs.filter((item) => item.key !== 'shortcuts' && item.key !== 'lyrics')
+                : allSectionTabs,
         [allSectionTabs],
     );
 

@@ -107,3 +107,82 @@
         }
     }
 }
+
+// ============================================================================
+// 移动端：输入框 / 触控细节
+// ============================================================================
+
+[data-platform='ios'] {
+    // App.scss 给 body 设了 user-select: none（防长按选中文字）。
+    // iOS WebKit 的已知问题：祖先 user-select:none 会让 input / textarea 无法输入，必须显式恢复。
+    input,
+    textarea,
+    [contenteditable='true'] {
+        -webkit-user-select: text;
+        user-select: text;
+    }
+
+    // iOS 在聚焦 font-size < 16px 的输入框时会自动放大页面
+    input,
+    textarea,
+    select {
+        font-size: 16px;
+    }
+
+    // 去掉点按高亮与 300ms 延迟，提升触控响应
+    button,
+    a,
+    [role='button'],
+    .song-table__row {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+}
+
+// ============================================================================
+// 移动端：其余页面 / 组件的零散适配
+// ============================================================================
+
+[data-platform='ios'] {
+    // 顶部搜索框随屏宽伸缩（桌面固定 320px）
+    .l-topbar__search {
+        width: 100%;
+        flex: 1;
+        min-width: 0;
+    }
+
+    // 为桌面滚动条预留的负 margin / padding 在手机上没有意义，反而造成横向溢出
+    .p-plugin-manager__body,
+    .p-theme__body {
+        margin-right: 0;
+        padding-right: 0;
+        scrollbar-gutter: auto;
+    }
+
+    // 触屏没有 hover：悬停才出现的操作需要常驻
+    .l-queue-drawer__item-remove {
+        opacity: 0.7;
+    }
+
+    .media-card__play-fab {
+        opacity: 1;
+        transform: none;
+    }
+
+    // 沉浸式电台：为底部 TabBar 留出空间，避免被盖住
+    .l-app-shell--immersive-radio {
+        .l-app-shell__main,
+        .l-app-shell__content {
+            width: 100%;
+            height: calc(100dvh - var(--size-mobile-bottom) - env(safe-area-inset-top));
+        }
+    }
+
+    // Toast 避开刘海 / 灵动岛
+    .toast-container {
+        top: calc(env(safe-area-inset-top) + var(--size-topbar-h) + 8px);
+        right: var(--space-3);
+        left: var(--space-3);
+        align-items: flex-end;
+    }
+}
