@@ -92,6 +92,7 @@ export function registerDataBridges(): void {
         getAllMusicItems: () => localMusicStore.getAllMusicItems(),
         getScanFolders: () => localMusicStore.getScanFolders(),
         syncScanFolders: (folderPaths: string[]) => localMusicStore.syncScanFolders(folderPaths),
+        importFiles: (filePaths: string[]) => localMusicStore.importFiles(filePaths),
         deleteItems: (musicBases: any[]) => localMusicStore.deleteItems(musicBases),
         onLibraryChanged: (cb: () => void) => localMusicStore.onLibraryChanged(cb),
         onScanProgress: (cb: (progress: any) => void) => localMusicStore.onScanProgress(cb),

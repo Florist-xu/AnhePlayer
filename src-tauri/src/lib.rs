@@ -9,6 +9,7 @@ use commands::{
     fs_util::*,
     global_context::*,
     http_proxy::*,
+    local_import::*,
     local_meta::*,
     lyric_window::{self, sync_lyric_window, LyricWindowState},
     netease::*,
@@ -98,6 +99,7 @@ pub fn run() {
             // Local Music
             local_scan_dir,
             local_parse_meta,
+            local_import_files,
             // Download
             download_file,
             download_cancel,

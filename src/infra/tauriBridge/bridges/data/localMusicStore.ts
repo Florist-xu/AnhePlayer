@@ -219,6 +219,23 @@ class LocalMusicStore {
     }
 
     /** 删除本地歌曲：仅移除曲库记录（不触碰磁盘文件） */
+    /**
+     * 导入单个文件（iOS 无法扫描目录时使用）：拷进沙盒导入目录，再把该目录加入扫描文件夹并触发扫描。
+     * 返回成功 / 失败的文件数。
+     */
+    public async importFiles(filePaths: string[]): Promise<{ imported: number; failed: number }> {
+        const result = await tauriInvoke<{ dir: string; imported: number; failed: number }>(
+            'local_import_files',
+            { files: filePaths },
+        );
+        if (!result) return { imported: 0, failed: filePaths.length };
+        if (result.imported > 0) {
+            const folders = await this.getScanFolders();
+            await this.syncScanFolders([...folders.map((f) => f.folderPath), result.dir]);
+        }
+        return { imported: result.imported, failed: result.failed };
+    }
+
     public async deleteItems(musicBases: IMedia.IMediaBase[]): Promise<void> {
         const data = await this.init();
         const kill = new Set(musicBases.map((b) => `${b.platform}\u0000${String(b.id)}`));

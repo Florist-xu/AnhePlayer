@@ -576,6 +576,10 @@
     "local_music": {
         "title": "本地音乐",
         "scan_folder": "扫描文件夹",
+        "import_files": "导入音乐",
+        "empty_desc_mobile": "点击右上角「导入音乐」添加本地歌曲",
+        "import_done": "已导入 {{count}} 首",
+        "import_failed": "{{count}} 个文件导入失败",
         "search_placeholder": "搜索本地音乐",
         "tab_songs": "单曲",
         "tab_artists": "歌手",

@@ -6,6 +6,7 @@ pub mod forwarder;
 pub mod fs_util;
 pub mod global_context;
 pub mod http_proxy;
+pub mod local_import;
 pub mod local_meta;
 #[cfg(desktop)]
 pub mod lyric_window;

@@ -10,6 +10,7 @@ import {
     DatabaseBackup,
     Info,
 } from 'lucide-react';
+import { isMobile } from '@common/platform';
 import { TabBar, type TabItem } from '@renderer/mainWindow/components/ui/TabBar';
 import { GeneralSection } from './sections/GeneralSection';
 import { PlaybackSection } from './sections/PlaybackSection';
@@ -44,7 +45,7 @@ export default function SettingPage() {
     const { t } = useTranslation();
     const [activeKey, setActiveKey] = useState('general');
 
-    const sectionTabs: TabItem[] = useMemo(
+    const allSectionTabs: TabItem[] = useMemo(
         () => [
             {
                 key: 'general',
@@ -84,6 +85,13 @@ export default function SettingPage() {
             { key: 'about', label: t('common.about'), icon: <Info width={16} height={16} /> },
         ],
         [t],
+    );
+
+    // 键盘快捷键在触屏设备上没有意义，移动端隐藏该分区
+    const sectionTabs = useMemo(
+        () =>
+            isMobile ? allSectionTabs.filter((item) => item.key !== 'shortcuts') : allSectionTabs,
+        [allSectionTabs],
     );
 
     const sectionContent = useMemo(() => {

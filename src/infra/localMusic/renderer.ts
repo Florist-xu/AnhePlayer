@@ -18,6 +18,7 @@ interface IMod {
     getScanFolders(): Promise<IScanFolder[]>;
     syncScanFolders(folderPaths: string[]): Promise<IScanResult>;
 
+    importFiles(filePaths: string[]): Promise<{ imported: number; failed: number }>;
     deleteItems(musicBases: IMedia.IMediaBase[]): Promise<void>;
 
     onLibraryChanged(cb: () => void): () => void;
@@ -36,6 +37,13 @@ class LocalMusicRenderer {
 
     public getAllMusicItems(): Promise<IMusic.IMusicItem[]> {
         return mod.getAllMusicItems();
+    }
+
+    // ─── 导入单个文件（iOS） ───
+
+    /** 把选中的文件拷进沙盒并扫描入库。 */
+    public importFiles(filePaths: string[]): Promise<{ imported: number; failed: number }> {
+        return mod.importFiles(filePaths);
     }
 
     // ─── 删除 ───

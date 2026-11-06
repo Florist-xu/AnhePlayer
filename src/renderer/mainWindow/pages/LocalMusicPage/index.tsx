@@ -1,8 +1,12 @@
 import { useState, useMemo, useCallback, useDeferredValue, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAtomValue } from 'jotai/react';
-import { FolderSearch, Search, RefreshCw } from 'lucide-react';
-import { RequestStatus } from '@common/constant';
+import { FolderSearch, FilePlus2, Search, RefreshCw } from 'lucide-react';
+import { RequestStatus, SUPPORTED_AUDIO_EXTS } from '@common/constant';
+import { isMobile } from '@common/platform';
+import localMusic from '@infra/localMusic/renderer';
+import systemUtil from '@infra/systemUtil/renderer';
+import { showToast } from '../../components/ui/Toast';
 import { TabBar, type TabItem } from '../../components/ui/TabBar';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -120,6 +124,32 @@ export default function LocalMusicPage() {
         showModal('ScanFolderModal');
     }, []);
 
+    // iOS 无法扫描任意目录：改为选文件导入（拷进 App 沙盒后再扫描）
+    const handleImportFiles = useCallback(async () => {
+        const result = await systemUtil.showOpenDialog({
+            properties: ['openFile', 'multiSelections'],
+            filters: [
+                {
+                    name: 'Audio',
+                    extensions: [...SUPPORTED_AUDIO_EXTS].map((ext) => ext.replace(/^\./, '')),
+                },
+            ],
+        });
+        if (result.canceled || result.filePaths.length === 0) return;
+        try {
+            const { imported, failed } = await localMusic.importFiles(result.filePaths);
+            if (imported > 0) {
+                showToast(t('local_music.import_done', { count: imported }), { type: 'info' });
+            }
+            if (failed > 0) {
+                showToast(t('local_music.import_failed', { count: failed }), { type: 'warn' });
+            }
+        } catch (e) {
+            console.error('[LocalMusic] import error:', e);
+            showToast(t('local_music.scan_failed'), { type: 'warn' });
+        }
+    }, [t]);
+
     // ── 状态列渲染 ──
     const statusColumn = useStatusColumn();
 
@@ -133,14 +163,25 @@ export default function LocalMusicPage() {
                     <h2 className="p-local-music__title">{t('local_music.title')}</h2>
                     {scanning && <RefreshCw size={20} className="p-local-music__scan-indicator" />}
                 </div>
-                <Button
-                    variant="secondary"
-                    size="md"
-                    icon={<FolderSearch size={16} />}
-                    onClick={handleScanFolder}
-                >
-                    {t('local_music.scan_folder')}
-                </Button>
+                {isMobile ? (
+                    <Button
+                        variant="secondary"
+                        size="md"
+                        icon={<FilePlus2 size={16} />}
+                        onClick={handleImportFiles}
+                    >
+                        {t('local_music.import_files')}
+                    </Button>
+                ) : (
+                    <Button
+                        variant="secondary"
+                        size="md"
+                        icon={<FolderSearch size={16} />}
+                        onClick={handleScanFolder}
+                    >
+                        {t('local_music.scan_folder')}
+                    </Button>
+                )}
             </div>
 
             {/* ── TabBar + 搜索框 ── */}
@@ -169,7 +210,11 @@ export default function LocalMusicPage() {
                             status={loading ? RequestStatus.Pending : RequestStatus.Done}
                             isEmpty={isEmpty}
                             emptyTitle={t('local_music.empty_title')}
-                            emptyDescription={t('local_music.empty_desc')}
+                            emptyDescription={
+                                isMobile
+                                    ? t('local_music.empty_desc_mobile')
+                                    : t('local_music.empty_desc')
+                            }
                         />
                     ) : (
                         <SongTable

@@ -509,6 +509,10 @@
     "local_music": {
         "title": "Local Music",
         "scan_folder": "Scan Folders",
+        "import_files": "Import Music",
+        "empty_desc_mobile": "Tap \"Import Music\" at the top right to add local tracks",
+        "import_done": "Imported {{count}} track(s)",
+        "import_failed": "{{count}} file(s) failed to import",
         "search_placeholder": "Search local music",
         "tab_songs": "Songs",
         "tab_artists": "Artists",
