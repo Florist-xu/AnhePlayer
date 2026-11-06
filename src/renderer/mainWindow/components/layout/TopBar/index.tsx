@@ -4,8 +4,9 @@
 
 import { useState, useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useMatch } from 'react-router';
+import { useNavigate, useMatch, useLocation } from 'react-router';
 import { ChevronLeft, ChevronRight, Search, Minus, Square, X } from 'lucide-react';
+import { isMobile } from '@common/platform';
 import systemUtil from '@infra/systemUtil/renderer';
 import appConfig from '@infra/appConfig/renderer';
 import { searchRoute, RoutePaths } from '../../../routes';
@@ -20,6 +21,10 @@ import './index.scss';
 export default function TopBar() {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    // 移动端返回按钮：react-router 对首个历史条目的 key 固定为 'default'，其余均可回退。
+    // 不用 Navigation API（旧版 iOS WebView 不支持）。
+    const location = useLocation();
+    const canGoBackMobile = isMobile && location.key !== 'default';
     const [searchValue, setSearchValue] = useState('');
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -160,6 +165,18 @@ export default function TopBar() {
         <header className="l-topbar">
             {/* ── 拖拽区域 ── */}
             <div className="l-topbar__drag-region" data-tauri-drag-region />
+
+            {/* ── 移动端: 返回按钮（桌面端用下方的前进/后退按钮组） ── */}
+            {canGoBackMobile && (
+                <button
+                    className="l-topbar__mobile-back"
+                    type="button"
+                    aria-label={t('app.nav_back')}
+                    onClick={() => navigate(-1)}
+                >
+                    <ChevronLeft size={22} />
+                </button>
+            )}
 
             {/* ── 左侧: 导航按钮 ── */}
             <div className="l-topbar__nav">

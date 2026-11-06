@@ -186,3 +186,28 @@
         align-items: flex-end;
     }
 }
+
+// 顶部返回按钮（二级页面：专辑 / 歌手 / 歌单详情 / 搜索结果）
+.l-topbar__mobile-back {
+    display: none;
+}
+
+[data-platform='ios'] .l-topbar__mobile-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    margin-left: calc(var(--space-2) * -1);
+    border: none;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    &:active {
+        background: var(--color-fill-subtle);
+    }
+}
