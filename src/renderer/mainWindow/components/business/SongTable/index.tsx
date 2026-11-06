@@ -24,6 +24,7 @@ import { tinykeys } from 'tinykeys';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@common/cn';
 import { RequestStatus } from '@common/constant';
+import { isMobile } from '@common/platform';
 import { useCurrentMusic } from '../../../core/trackPlayer/hooks';
 import { ListFooter } from '../../ui/ListFooter';
 import { StatusPlaceholder } from '../../ui/StatusPlaceholder';
@@ -154,6 +155,55 @@ const DND_MODIFIERS = [restrictToVerticalAxis];
 const DEFAULT_ROW_HEIGHT = 48;
 /** 全局滚动容器选择器 */
 const SCROLL_CONTAINER_SELECTOR = '.l-app-shell__content';
+
+// ── 触屏：长按弹出右键菜单 ──
+// iOS WKWebView 不会在长按时触发 contextmenu，这里用 touch 事件模拟。
+// 同一时刻只会有一个触点在行上，所以状态放模块级即可。
+const LONG_PRESS_MS = 500;
+const longPressState: { timer: ReturnType<typeof setTimeout> | null; fired: boolean } = {
+    timer: null,
+    fired: false,
+};
+
+function clearLongPress(): void {
+    if (longPressState.timer) {
+        clearTimeout(longPressState.timer);
+        longPressState.timer = null;
+    }
+}
+
+function startLongPress(e: React.TouchEvent, fire: (fake: ReactMouseEvent) => void): void {
+    clearLongPress();
+    longPressState.fired = false;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const { clientX, clientY, pageX, pageY } = touch;
+    const currentTarget = e.currentTarget;
+    const target = e.target;
+    longPressState.timer = setTimeout(() => {
+        longPressState.timer = null;
+        longPressState.fired = true;
+        fire({
+            clientX,
+            clientY,
+            pageX,
+            pageY,
+            currentTarget,
+            target,
+            preventDefault() {},
+            stopPropagation() {},
+        } as unknown as ReactMouseEvent);
+    }, LONG_PRESS_MS);
+}
+
+/** 长按已触发时，吞掉随后的 click（返回 true 表示应忽略本次点击） */
+function consumeLongPressClick(): boolean {
+    if (longPressState.fired) {
+        longPressState.fired = false;
+        return true;
+    }
+    return false;
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -296,7 +346,7 @@ export function SongTable({
     enableSelection = false,
     selectedIds: externalSelectedIds,
     onSelectionChange,
-    enableDragSort = false,
+    enableDragSort: enableDragSortProp = false,
     onDragSortEnd,
     doubleClickBehavior,
     onRowClick: externalOnRowClick,
@@ -310,6 +360,8 @@ export function SongTable({
     scrollParent: externalScrollParent,
     className,
 }: SongTableProps) {
+    // 触屏上拖拽排序会和滚动手势冲突，移动端不启用
+    const enableDragSort = enableDragSortProp && !isMobile;
     const { t } = useTranslation();
     const currentMusic = useCurrentMusic();
     const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
@@ -370,7 +422,16 @@ export function SongTable({
     // 每次渲染产生新引用，导致 columns → colGroup → virtuosoComponents 级联重建，
     // 行 DOM 被销毁重建后浏览器无法在同一元素上触发 dblclick。
     const hideColumnsKey = (hideColumns ?? []).join(',');
-    const hideSet = useMemo(() => new Set(hideColumns ?? []), [hideColumnsKey]);
+    const hideSet = useMemo(() => {
+        const set = new Set(hideColumns ?? []);
+        // 窄屏只保留 标题 / 歌手 / 时长
+        if (isMobile) {
+            set.add('index');
+            set.add('album');
+            set.add('platform');
+        }
+        return set;
+    }, [hideColumnsKey]);
 
     const columns = useMemo<InternalColumn[]>(() => {
         const cols: InternalColumn[] = [];
@@ -398,7 +459,7 @@ export function SongTable({
             cols.push({
                 id: 'artist',
                 header: t('media.artist'),
-                width: '18%',
+                width: isMobile ? '30%' : '18%',
                 render: (item) => item.artist,
             });
         }
@@ -709,7 +770,12 @@ export function SongTable({
                 : false;
             const isSelected = selectedIdsRef.current.has(item.id);
 
-            const onClick = (e: ReactMouseEvent) => handleRowClickRef.current(item, index, e);
+            const onClick = (e: ReactMouseEvent) => {
+                if (isMobile && consumeLongPressClick()) return;
+                handleRowClickRef.current(item, index, e);
+                // 触屏没有双击：单击即播放
+                if (isMobile) onDblClick(e);
+            };
             const onDblClick = (e: ReactMouseEvent) => {
                 if (externalOnRowDoubleClickRef.current) {
                     const selectedItems = resolveSelectedItemsRef.current(selectedIdsRef.current);
@@ -729,6 +795,15 @@ export function SongTable({
             };
             const onCtxMenu = (e: ReactMouseEvent) =>
                 handleRowContextMenuRef.current(item, index, e);
+            // 触屏：长按等价于右键
+            const touchProps = isMobile
+                ? {
+                      onTouchStart: (e: React.TouchEvent) => startLongPress(e, onCtxMenu),
+                      onTouchMove: clearLongPress,
+                      onTouchEnd: clearLongPress,
+                      onTouchCancel: clearLongPress,
+                  }
+                : {};
 
             if (enableDragSort) {
                 // 多选拖拽中，被拖拽的其他选中项显示为 ghost
@@ -751,6 +826,7 @@ export function SongTable({
                         onClick={onClick}
                         onDoubleClick={onDblClick}
                         onContextMenu={onCtxMenu}
+                        {...touchProps}
                     />
                 );
             }
@@ -768,6 +844,7 @@ export function SongTable({
                     onClick={onClick}
                     onDoubleClick={onDblClick}
                     onContextMenu={onCtxMenu}
+                    {...touchProps}
                 />
             );
         };
