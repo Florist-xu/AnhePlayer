@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { isMobile } from '@common/platform';
 import { useTranslation } from 'react-i18next';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingRow } from '../components/SettingRow';
@@ -117,6 +118,7 @@ export function PlaybackSection() {
     const [audioOutputDevice, setAudioOutputDevice] = useConfigValue('playMusic.audioOutputDevice');
 
     useEffect(() => {
+        if (!navigator.mediaDevices?.enumerateDevices) return;
         navigator.mediaDevices.enumerateDevices().then((devices) => {
             const audioOutputs: IAudioOutputDevice[] = devices
                 .filter((d) => d.kind === 'audiooutput')
@@ -231,31 +233,39 @@ export function PlaybackSection() {
                         />
                     }
                 />
-                <SettingRow
-                    label={t('settings.playback.output_device_label')}
-                    description={t('settings.playback.output_device_desc')}
-                    control={
-                        <Select
-                            value={selectedDeviceId}
-                            onChange={handleDeviceChange}
-                            options={deviceOptions}
+                {/* 输出设备选择依赖 setSinkId / mediaDevices，iOS 上不存在（由系统路由控制） */}
+                {!isMobile && (
+                    <>
+                        <SettingRow
+                            label={t('settings.playback.output_device_label')}
+                            description={t('settings.playback.output_device_desc')}
+                            control={
+                                <Select
+                                    value={selectedDeviceId}
+                                    onChange={handleDeviceChange}
+                                    options={deviceOptions}
+                                />
+                            }
                         />
-                    }
-                />
-                <SettingRow
-                    label={t('settings.playback.device_removed_label')}
-                    description={t('settings.playback.device_removed_desc')}
-                    control={
-                        <Select
-                            value={whenDeviceRemoved ?? 'play'}
-                            onChange={setWhenDeviceRemoved}
-                            options={[
-                                { value: 'play', label: t('settings.playback.continue_playing') },
-                                { value: 'pause', label: t('settings.playback.pause') },
-                            ]}
+                        <SettingRow
+                            label={t('settings.playback.device_removed_label')}
+                            description={t('settings.playback.device_removed_desc')}
+                            control={
+                                <Select
+                                    value={whenDeviceRemoved ?? 'play'}
+                                    onChange={setWhenDeviceRemoved}
+                                    options={[
+                                        {
+                                            value: 'play',
+                                            label: t('settings.playback.continue_playing'),
+                                        },
+                                        { value: 'pause', label: t('settings.playback.pause') },
+                                    ]}
+                                />
+                            }
                         />
-                    }
-                />
+                    </>
+                )}
                 <SettingRow
                     label={t('settings.playback.case_sensitive_label')}
                     description={t('settings.playback.case_sensitive_desc')}

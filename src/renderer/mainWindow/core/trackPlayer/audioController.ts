@@ -198,7 +198,10 @@ class WebAudioController extends EventEmitter<IAudioControllerEvents> implements
     }
 
     setSinkId(deviceId: string): Promise<void> {
-        return (this.audio as any).setSinkId(deviceId);
+        // Safari / iOS 不支持 setSinkId（输出设备由系统路由控制），直接视为成功
+        const audio = this.audio as any;
+        if (typeof audio.setSinkId !== 'function') return Promise.resolve();
+        return audio.setSinkId(deviceId);
     }
 
     reset(): void {

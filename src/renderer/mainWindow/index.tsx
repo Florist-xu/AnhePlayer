@@ -27,6 +27,8 @@ root.render(
             display: 'grid',
             placeItems: 'center',
             height: '100vh',
+            paddingTop: 'env(safe-area-inset-top)',
+            boxSizing: 'border-box',
             // 使用主题 token，默认值与旧硬编码值一致，浅色主题下不会先闪深色
             background: 'var(--color-bg-base, #121212)',
             color: 'var(--color-text-secondary, #a1a1aa)',
@@ -46,6 +48,8 @@ function renderErrorFallback(error: any, mode: 'error' | 'timeout' = 'error') {
         <div
             style={{
                 padding: 32,
+                // 避开 iOS 状态栏 / 刘海，否则错误信息被时间和电量盖住
+                paddingTop: 'calc(env(safe-area-inset-top) + 32px)',
                 fontFamily: 'Segoe UI, sans-serif',
                 background: '#18181b',
                 color: '#f4f4f5',

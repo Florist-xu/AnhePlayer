@@ -217,7 +217,8 @@ class TrackPlayer {
         });
 
         // 9. 监听音频输出设备断开
-        navigator.mediaDevices.addEventListener('devicechange', async () => {
+        // 注意：iOS WKWebView 中 tauri:// 非安全上下文，mediaDevices 不存在，必须判空
+        navigator.mediaDevices?.addEventListener('devicechange', async () => {
             try {
                 const savedDevice = appConfig.getConfigByKey('playMusic.audioOutputDevice');
                 if (!savedDevice?.deviceId || savedDevice.deviceId === 'default') return;

@@ -42,10 +42,25 @@ export interface MusicItemMenuContext {
 
 /** 复制文本到剪贴板并弹出 toast */
 function copyToClipboard(text: string): void {
-    navigator.clipboard.writeText(text).then(
-        () => showToast(i18n.t('common.copied')),
-        () => showToast(i18n.t('common.copied')),
-    );
+    const done = () => showToast(i18n.t('common.copied'));
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(text).then(done, done);
+        return;
+    }
+    // iOS WKWebView 的 tauri:// 非安全上下文没有 navigator.clipboard，回退到旧接口
+    try {
+        const el = document.createElement('textarea');
+        el.value = text;
+        el.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+        document.body.appendChild(el);
+        el.focus();
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+    } catch {
+        // 复制失败时也给出提示，与原行为一致
+    }
+    done();
 }
 
 /**
