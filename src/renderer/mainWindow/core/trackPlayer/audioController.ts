@@ -220,6 +220,21 @@ class WebAudioController extends EventEmitter<IAudioControllerEvents> implements
 
     // ─── Private Methods ───
 
+    /** 把进度同步给系统媒体控件（锁屏进度条）。仅在时长有效时设置。 */
+    private syncPositionState(): void {
+        const { duration, currentTime, playbackRate } = this.audio;
+        if (!Number.isFinite(duration) || duration <= 0) return;
+        try {
+            navigator.mediaSession.setPositionState({
+                duration,
+                position: Math.min(Math.max(currentTime, 0), duration),
+                playbackRate: playbackRate || 1,
+            });
+        } catch {
+            // 不支持或参数瞬时无效（如 HLS 直播流）时忽略
+        }
+    }
+
     private bindEvents(): void {
         this.audio.onplaying = () => {
             this.pendingHlsPlay = false;
@@ -238,6 +253,7 @@ class WebAudioController extends EventEmitter<IAudioControllerEvents> implements
         };
 
         this.audio.ontimeupdate = () => {
+            this.syncPositionState();
             this.emit('timeUpdate', {
                 currentTime: this.audio.currentTime,
                 duration: this.audio.duration,

@@ -118,6 +118,8 @@ pub fn run() {
         .setup(|app| {
             commands::forwarder::init_forwarder(app.handle().clone());
             commands::paths::init(app.handle());
+            // iOS：启用 playback 音频会话，后台/锁屏可继续播放（其他平台为空实现）
+            commands::audio_session::activate();
             #[cfg(desktop)]
             lyric_window::init_lyric_window(app.handle());
 
@@ -132,8 +134,14 @@ pub fn run() {
             #[cfg(mobile)]
             let _ = (window, event);
         })
-        .run(tauri::generate_context!())
-        .expect("error while running anhe-player tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building anhe-player tauri application")
+        .run(|_app, event| {
+            // 被来电 / Siri 等打断后回到前台，需要重新激活音频会话
+            if let tauri::RunEvent::Resumed = event {
+                commands::audio_session::activate();
+            }
+        });
 }
 
 #[cfg(desktop)]

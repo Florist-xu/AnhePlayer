@@ -653,6 +653,14 @@ class TrackPlayer {
         navigator.mediaSession.setActionHandler('previoustrack', () => this.skipToPrev());
         navigator.mediaSession.setActionHandler('play', () => this.resume());
         navigator.mediaSession.setActionHandler('pause', () => this.pause());
+        // 锁屏 / 控制中心的进度条拖动
+        try {
+            navigator.mediaSession.setActionHandler('seekto', (details) => {
+                if (typeof details.seekTime === 'number') this.seekTo(details.seekTime);
+            });
+        } catch {
+            // 部分 WebView 不支持 seekto，忽略即可
+        }
     }
 
     // ─── 错误处理 ───
