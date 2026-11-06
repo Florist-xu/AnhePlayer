@@ -156,6 +156,7 @@ export default function PlayerBar() {
                         <button
                             className={cn(
                                 'l-player-bar__ctrl-btn',
+                                'l-player-bar__desktop-lyric-btn',
                                 enableDesktopLyric && 'is-active',
                             )}
                             type="button"

@@ -129,3 +129,54 @@
         bottom: var(--size-mobile-bottom);
     }
 }
+
+// ─── 移动端：播放栏精简 ───
+// 隐藏音量 / 倍速 / 音质 / 桌面歌词等桌面向控件，仅保留 封面+标题 与 上一首/播放/下一首
+
+[data-platform='ios'] .l-player-bar {
+    &__body {
+        gap: var(--space-2);
+        padding: 0 var(--space-3);
+    }
+
+    &__left {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+    }
+
+    &__info {
+        overflow: hidden;
+    }
+
+    &__title,
+    &__artist {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__center {
+        flex: 0 0 auto;
+        gap: var(--space-1);
+    }
+
+    &__right,
+    &__actions,
+    &__divider,
+    &__desktop-lyric-btn {
+        display: none !important;
+    }
+}
+
+// ─── 移动端：歌曲工具栏允许换行，避免按钮溢出屏幕 ───
+
+[data-platform='ios'] .song-toolbar {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+
+    &__left {
+        flex-wrap: wrap;
+    }
+}

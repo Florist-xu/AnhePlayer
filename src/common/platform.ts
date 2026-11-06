@@ -6,6 +6,10 @@
  */
 function detectIOS(): boolean {
     if (typeof navigator === 'undefined') return false;
+    // 开发调试：在桌面浏览器里用 ?platform=ios 强制走移动端布局
+    if (typeof location !== 'undefined' && /[?&]platform=ios(&|$)/.test(location.search)) {
+        return true;
+    }
     const ua = navigator.userAgent || '';
     if (/iPhone|iPad|iPod/i.test(ua)) return true;
     return /Macintosh/i.test(ua) && (navigator.maxTouchPoints ?? 0) > 1;
