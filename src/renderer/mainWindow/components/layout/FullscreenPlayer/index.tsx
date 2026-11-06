@@ -227,6 +227,7 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                                     <button
                                         className={cn(
                                             'l-fullscreen-player__tool-btn',
+                                            'l-fullscreen-player__desktop-lyric-btn',
                                             desktopLyricEnabled && 'is-active',
                                         )}
                                         type="button"

@@ -162,7 +162,16 @@
         gap: var(--space-1);
     }
 
-    &__right,
+    // 右侧区域只保留「播放队列」按钮（音量由硬件键控制，倍速/音质暂不提供）
+    &__right {
+        width: auto;
+        flex-shrink: 0;
+
+        > :not(.l-player-bar__queue-btn) {
+            display: none !important;
+        }
+    }
+
     &__actions,
     &__divider,
     &__desktop-lyric-btn {

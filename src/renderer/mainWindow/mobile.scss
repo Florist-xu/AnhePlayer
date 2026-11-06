@@ -1,0 +1,109 @@
+// ============================================================================
+// 移动端（iOS）适配 — 弹层 / 抽屉 / 全屏播放器
+// ============================================================================
+//
+// 通过 <html data-platform="ios"> 启用，桌面端不受影响。
+// 基础布局（TabBar / TopBar / PlayerBar）见 App.scss。
+
+[data-platform='ios'] {
+    // ── Modal：固定宽度改为随屏宽收缩 ──
+
+    .modal {
+        max-width: calc(100vw - var(--space-6));
+        max-height: 85dvh;
+
+        &--sm,
+        &--md,
+        &--lg {
+            width: min(92vw, 520px);
+        }
+    }
+
+    .modal__header {
+        padding: var(--space-4);
+    }
+
+    // ── 右键菜单：不超出屏幕 ──
+
+    .context-menu {
+        min-width: 180px;
+        max-width: calc(100vw - var(--space-4));
+    }
+
+    // ── 抽屉：占 90% 屏宽，避开顶部安全区与底部 TabBar/播放栏 ──
+
+    .drawer {
+        width: min(90vw, 380px);
+    }
+
+    .l-queue-drawer.drawer {
+        top: calc(env(safe-area-inset-top) + var(--size-topbar-h));
+        bottom: calc(var(--size-mobile-bottom) + var(--size-player-h));
+    }
+
+    // ── 全屏播放器：竖排（封面 → 歌曲信息 → 歌词 → 控制） ──
+    // 桌面版是左右两栏。这里让两个容器 display: contents，把子元素提升为 body 的直接子项，
+    // 再用 order 重排，无需改动 TSX 结构。
+
+    .l-fullscreen-player {
+        &__header {
+            padding: calc(env(safe-area-inset-top) + var(--space-3)) var(--space-4) var(--space-2);
+        }
+
+        &__body {
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+            gap: var(--space-4);
+            padding: 0 var(--space-6) calc(env(safe-area-inset-bottom) + var(--space-4));
+        }
+
+        &__artwork-wrapper,
+        &__right {
+            display: contents;
+        }
+
+        &__artwork {
+            order: 1;
+            width: min(62vw, 34dvh);
+            align-self: center;
+            flex-shrink: 0;
+        }
+
+        &__song-info {
+            order: 2;
+            margin-bottom: 0;
+            text-align: center;
+        }
+
+        &__song-title {
+            font-size: var(--text-heading-size);
+            -webkit-line-clamp: 2;
+        }
+
+        &__song-artist {
+            font-size: var(--text-body-size);
+        }
+
+        &__lyric-container {
+            order: 3;
+            flex: 1;
+            min-height: 0;
+        }
+
+        &__controls {
+            order: 4;
+            margin-top: 0;
+            gap: var(--space-4);
+        }
+
+        &__playback {
+            gap: var(--space-5);
+        }
+
+        // 桌面歌词在 iOS 上不存在
+        &__desktop-lyric-btn {
+            display: none;
+        }
+    }
+}

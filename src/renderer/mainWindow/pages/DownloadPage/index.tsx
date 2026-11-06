@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FolderOpen } from 'lucide-react';
+import { isMobile } from '@common/platform';
 import appConfig from '@infra/appConfig/renderer';
 import systemUtil from '@infra/systemUtil/renderer';
 import { useDownloadTasks } from '@infra/downloadManager/renderer';
@@ -65,14 +66,17 @@ export default function DownloadPage() {
             {/* ── 页头 ── */}
             <div className="p-download__header">
                 <h2 className="p-download__title">{t('download.title')}</h2>
-                <Button
-                    variant="secondary"
-                    size="md"
-                    icon={<FolderOpen size={16} />}
-                    onClick={handleOpenFolder}
-                >
-                    {t('download.open_download_folder')}
-                </Button>
+                {/* iOS 沙盒内无法用系统程序打开目录；文件可在「文件」App 的本应用目录查看 */}
+                {!isMobile && (
+                    <Button
+                        variant="secondary"
+                        size="md"
+                        icon={<FolderOpen size={16} />}
+                        onClick={handleOpenFolder}
+                    >
+                        {t('download.open_download_folder')}
+                    </Button>
+                )}
             </div>
 
             {/* ── TabBar ── */}

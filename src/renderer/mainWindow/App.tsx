@@ -32,6 +32,7 @@ import './components/business/modals';
 import './components/business/contextMenus';
 
 import './App.scss';
+import './mobile.scss';
 
 export default function App() {
     const location = useLocation();

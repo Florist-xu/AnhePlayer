@@ -223,7 +223,7 @@ export default function PlayerBar() {
 
                     <div className="l-player-bar__divider l-player-bar__divider--tall" />
                     <button
-                        className="l-player-bar__ctrl-btn"
+                        className="l-player-bar__ctrl-btn l-player-bar__queue-btn"
                         data-click-outside-ignore
                         type="button"
                         title={t('playback.show_queue')}
