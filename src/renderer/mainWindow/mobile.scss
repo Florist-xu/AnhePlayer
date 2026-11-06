@@ -211,3 +211,59 @@
         background: var(--color-fill-subtle);
     }
 }
+
+// ============================================================================
+// 移动端：详情页头部 / 软键盘 / 横屏安全区
+// ============================================================================
+
+[data-platform='ios'] {
+    // 歌单 / 专辑 / 榜单 / 歌手 页头：封面缩小、标题收敛，给标题与操作按钮留出空间
+    .music-sheet-header,
+    .p-artist-header {
+        gap: var(--space-4);
+        margin-bottom: var(--space-4);
+        align-items: flex-start;
+    }
+
+    // Artwork 的尺寸是内联 style，必须 !important 才能覆盖
+    .music-sheet-header__cover .artwork,
+    .p-artist-header__cover .artwork {
+        width: 120px !important;
+        height: 120px !important;
+    }
+
+    .music-sheet-header__title {
+        font-size: var(--text-title-size);
+    }
+
+    .p-artist-header__name {
+        font-size: 24px;
+    }
+
+    .music-sheet-header__actions {
+        flex-wrap: wrap;
+    }
+
+    // 搜索页歌手网格：2 列
+    .p-search__artist-grid-inner {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-4);
+    }
+
+    // 弹窗靠上而不是垂直居中：iOS 软键盘不会缩小布局视口，居中的弹窗里的输入框容易被键盘盖住
+    .modal-centering {
+        align-items: flex-start;
+        padding-top: calc(env(safe-area-inset-top) + 12dvh);
+    }
+
+    // 横屏时避开刘海 / 灵动岛两侧
+    .l-app-shell {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+
+    .l-mobile-tabbar {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+}
