@@ -9,20 +9,25 @@ edition = "2021"
 tauri-build = { version = "2.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.0", features = ["tray-icon", "devtools"] }
+tauri = { version = "2.0", features = ["devtools", "protocol-asset"] }
 tauri-plugin-opener = "2.0"
 tauri-plugin-http = "2.0"
 tauri-plugin-dialog = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.38", features = ["full"] }
-reqwest = { version = "0.12", features = ["json", "stream", "blocking"] }
+# 使用 rustls，避免 iOS 交叉编译依赖 openssl
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "blocking", "rustls-tls"] }
 dirs = "5.0"
 log = "0.4"
 env_logger = "0.11"
-open = "5.1"
 tiny_http = "0.12"
 lofty = "0.25"
+
+# 仅桌面端：系统托盘与「用系统程序打开」
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri = { version = "2.0", features = ["tray-icon", "devtools"] }
+open = "5.1"
 
 [lib]
 name = "anhe_player_lib"

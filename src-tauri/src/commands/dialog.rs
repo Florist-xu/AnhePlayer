@@ -56,6 +56,7 @@ pub async fn show_open_dialog(
             builder = builder.set_title(title.clone());
         }
     }
+    #[cfg(desktop)]
     if let Some(default_path) = &options.default_path {
         if !default_path.is_empty() {
             builder = builder.set_directory(default_path.clone());
@@ -82,24 +83,45 @@ pub async fn show_open_dialog(
     let multi = props.iter().any(|p| p == "multiSelections");
 
     // blocking API 在非主线程（async command 运行于异步线程池）中调用是官方推荐用法。
+    #[cfg(desktop)]
     let picked: Option<Vec<String>> = if is_dir {
         if multi {
-            builder
-                .blocking_pick_folders()
-                .map(|folders| folders.into_iter().map(|f| f.simplified().to_string()).collect())
+            builder.blocking_pick_folders().map(|folders| {
+                folders
+                    .into_iter()
+                    .map(|f| f.simplified().to_string())
+                    .collect()
+            })
         } else {
             builder
                 .blocking_pick_folder()
                 .map(|f| vec![f.simplified().to_string()])
         }
     } else if multi {
-        builder
-            .blocking_pick_files()
-            .map(|files| files.into_iter().map(|f| f.simplified().to_string()).collect())
+        builder.blocking_pick_files().map(|files| {
+            files
+                .into_iter()
+                .map(|f| f.simplified().to_string())
+                .collect()
+        })
     } else {
         builder
             .blocking_pick_file()
             .map(|f| vec![f.simplified().to_string()])
+    };
+    // iOS 没有目录选择器；只支持选文件（返回的 file_path 在移动端可能是 URL，前端需拷贝入沙盒）
+    #[cfg(mobile)]
+    let picked: Option<Vec<String>> = {
+        if is_dir {
+            return Err("directory picker is not supported on mobile".to_string());
+        }
+        if multi {
+            builder
+                .blocking_pick_files()
+                .map(|files| files.into_iter().map(|f| f.to_string()).collect())
+        } else {
+            builder.blocking_pick_file().map(|f| vec![f.to_string()])
+        }
     };
 
     Ok(picked.filter(|paths| !paths.is_empty()))
@@ -133,6 +155,7 @@ pub async fn show_save_dialog(
             builder = builder.add_filter(name, &ext_refs);
         }
     }
+    #[cfg(desktop)]
     if let Some(default_path) = &options.default_path {
         let normalized = default_path.replace('\\', "/");
         match normalized.rfind('/') {
@@ -154,7 +177,11 @@ pub async fn show_save_dialog(
         }
     }
 
-    Ok(builder
+    #[cfg(desktop)]
+    return Ok(builder
         .blocking_save_file()
-        .map(|f| f.simplified().to_string()))
+        .map(|f| f.simplified().to_string()));
+    // iOS 没有「另存为」对话框；前端应改为写入沙盒后用分享面板导出
+    #[cfg(mobile)]
+    Err("save dialog is not supported on mobile".to_string())
 }

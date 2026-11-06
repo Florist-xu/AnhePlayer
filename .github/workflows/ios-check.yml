@@ -1,0 +1,57 @@
+name: iOS Compile Check
+
+# 仅验证 iOS 目标能编译（不签名、不打包）。TestFlight 打包后续再加。
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src-tauri/**'
+      - 'src/**'
+      - '.github/workflows/ios-check.yml'
+  push:
+    branches: [main, master, 'ios/**']
+    paths:
+      - 'src-tauri/**'
+      - '.github/workflows/ios-check.yml'
+
+jobs:
+  ios-check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      # tauri-build 要求 frontendDist（../dist）存在
+      - name: Build frontend
+        run: pnpm build:tauri-prepare
+
+      - name: Cargo check (device)
+        working-directory: src-tauri
+        run: cargo check --target aarch64-apple-ios
+
+      - name: Cargo check (simulator)
+        working-directory: src-tauri
+        run: cargo check --target aarch64-apple-ios-sim
+
+      # 生成 Xcode 工程，验证 tauri.ios.conf.json 与 iOS 配置合法
+      - name: Tauri iOS init
+        run: pnpm tauri ios init --ci

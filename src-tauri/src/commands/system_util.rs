@@ -5,16 +5,24 @@ pub fn exit_app(app: AppHandle) {
     app.exit(0);
 }
 
+// ── 窗口类命令：仅桌面端有实际行为；移动端为空实现，保持前端 invoke 契约不报错 ──
+
 #[tauri::command]
+#[allow(unused_variables)]
 pub fn minimize_window(window: WebviewWindow, skip_task_bar: Option<bool>) {
-    let _ = window.minimize();
-    if let Some(true) = skip_task_bar {
-        let _ = window.set_skip_taskbar(true);
+    #[cfg(desktop)]
+    {
+        let _ = window.minimize();
+        if let Some(true) = skip_task_bar {
+            let _ = window.set_skip_taskbar(true);
+        }
     }
 }
 
 #[tauri::command]
+#[allow(unused_variables)]
 pub fn show_main_window(app: AppHandle) {
+    #[cfg(desktop)]
     if let Some(window) = app.get_webview_window("main") {
         // 关闭到托盘时窗口可能被最小化并隐藏任务栏按钮，恢复显示时一并还原
         let _ = window.set_skip_taskbar(false);
@@ -25,7 +33,9 @@ pub fn show_main_window(app: AppHandle) {
 }
 
 #[tauri::command]
+#[allow(unused_variables)]
 pub fn toggle_maximize(window: WebviewWindow) {
+    #[cfg(desktop)]
     if let Ok(is_max) = window.is_maximized() {
         if is_max {
             let _ = window.unmaximize();
@@ -36,7 +46,9 @@ pub fn toggle_maximize(window: WebviewWindow) {
 }
 
 #[tauri::command]
+#[allow(unused_variables)]
 pub fn toggle_visible(window: WebviewWindow) {
+    #[cfg(desktop)]
     if let Ok(visible) = window.is_visible() {
         if visible {
             let _ = window.hide();
@@ -48,29 +60,39 @@ pub fn toggle_visible(window: WebviewWindow) {
 }
 
 #[tauri::command]
+#[allow(unused_variables)]
 pub fn enter_minimode(app: AppHandle) {
-    if let Some(main) = app.get_webview_window("main") {
-        let _ = main.hide();
-    }
-    if let Some(mini) = app.get_webview_window("minimode") {
-        let _ = mini.show();
-        let _ = mini.set_focus();
+    #[cfg(desktop)]
+    {
+        if let Some(main) = app.get_webview_window("main") {
+            let _ = main.hide();
+        }
+        if let Some(mini) = app.get_webview_window("minimode") {
+            let _ = mini.show();
+            let _ = mini.set_focus();
+        }
     }
 }
 
 #[tauri::command]
+#[allow(unused_variables)]
 pub fn exit_minimode(app: AppHandle) {
-    if let Some(mini) = app.get_webview_window("minimode") {
-        let _ = mini.hide();
-    }
-    if let Some(main) = app.get_webview_window("main") {
-        let _ = main.show();
-        let _ = main.set_focus();
+    #[cfg(desktop)]
+    {
+        if let Some(mini) = app.get_webview_window("minimode") {
+            let _ = mini.hide();
+        }
+        if let Some(main) = app.get_webview_window("main") {
+            let _ = main.show();
+            let _ = main.set_focus();
+        }
     }
 }
 
 #[tauri::command]
+#[allow(unused_variables)]
 pub fn toggle_minimode(app: AppHandle) {
+    #[cfg(desktop)]
     if let Some(mini) = app.get_webview_window("minimode") {
         if let Ok(is_vis) = mini.is_visible() {
             if is_vis {
@@ -83,8 +105,11 @@ pub fn toggle_minimode(app: AppHandle) {
 }
 
 #[tauri::command]
-pub fn open_external(url: String) -> Result<(), String> {
-    open::that(url).map_err(|e| e.to_string())
+pub fn open_external(app: AppHandle, url: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -93,7 +118,11 @@ pub fn open_path(path: String) -> Result<(), String> {
     if !p.exists() {
         let _ = std::fs::create_dir_all(p);
     }
-    open::that(path).map_err(|e| e.to_string())
+    #[cfg(desktop)]
+    return open::that(path).map_err(|e| e.to_string());
+    // iOS：沙盒目录无法用系统程序打开
+    #[cfg(mobile)]
+    Err("open_path is not supported on mobile".to_string())
 }
 
 #[tauri::command]
@@ -118,19 +147,28 @@ pub fn show_item_in_folder(path: String) -> Result<bool, String> {
             .map_err(|e| e.to_string())?;
         Ok(true)
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(all(desktop, not(target_os = "windows")))]
     {
         open::that(path).map_err(|e| e.to_string())?;
         Ok(true)
+    }
+    // iOS 沙盒内无法在「文件」App 中定位条目
+    #[cfg(mobile)]
+    {
+        Ok(false)
     }
 }
 
 /// 忽略鼠标事件（歌词窗口穿透点击等）
 #[tauri::command]
+#[allow(unused_variables)]
 pub fn ignore_mouse_event(window: WebviewWindow, ignore: bool) -> Result<(), String> {
-    window
+    #[cfg(desktop)]
+    return window
         .set_ignore_cursor_events(ignore)
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string());
+    #[cfg(not(desktop))]
+    Ok(())
 }
 
 /// 前端日志落点：输出到 stderr（env_logger 接管）
@@ -176,6 +214,10 @@ fn dir_size(dir: &std::path::Path, depth: u32) -> u64 {
 /// 清除 WebView 浏览数据（cookies/localStorage/IndexedDB/缓存）。
 /// 注意：Tauri 未提供按类型清除的 API，此处为全量清除。
 #[tauri::command]
+#[allow(unused_variables)]
 pub fn clear_cache(window: WebviewWindow) -> Result<(), String> {
-    window.clear_all_browsing_data().map_err(|e| e.to_string())
+    #[cfg(desktop)]
+    return window.clear_all_browsing_data().map_err(|e| e.to_string());
+    #[cfg(mobile)]
+    Ok(())
 }

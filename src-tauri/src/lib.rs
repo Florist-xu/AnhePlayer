@@ -15,6 +15,7 @@ use commands::{
     system_util::*,
     webdav::*,
 };
+#[cfg(desktop)]
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -22,6 +23,7 @@ use tauri::{
 };
 
 /// 从配置文件读取关闭行为。
+#[cfg(desktop)]
 fn read_close_behavior() -> String {
     app_config::read_config_value()
         .get("normal.closeBehavior")
@@ -32,6 +34,7 @@ fn read_close_behavior() -> String {
 
 /// 显示并聚焦主窗口；同时恢复任务栏按钮（关闭到托盘时曾被隐藏）
 /// 注意：命名需避开 `system_util::show_main_window` 命令，否则会遮蔽同名命令
+#[cfg(desktop)]
 fn restore_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.set_skip_taskbar(false);
@@ -114,131 +117,144 @@ pub fn run() {
         ])
         .setup(|app| {
             commands::forwarder::init_forwarder(app.handle().clone());
+            commands::paths::init(app.handle());
+            #[cfg(desktop)]
             lyric_window::init_lyric_window(app.handle());
 
-            // ── 系统托盘 ──
-            // 关闭按钮在「最小化」模式下只会隐藏窗口，必须提供托盘入口将其找回。
-            let show_item = MenuItem::with_id(app, "tray-show", "显示主窗口", true, None::<&str>)?;
-            // 桌面歌词锁定时整窗鼠标穿透，托盘是唯一可靠的解锁入口
-            let lyric_item = CheckMenuItem::with_id(
-                app,
-                "tray-desktop-lyric",
-                "桌面歌词",
-                true,
-                app_config::get_config_bool("lyric.enableDesktopLyric", false),
-                None::<&str>,
-            )?;
-            let lock_lyric_item = CheckMenuItem::with_id(
-                app,
-                "tray-lock-lyric",
-                "锁定桌面歌词",
-                true,
-                app_config::get_config_bool("lyric.lockLyric", false),
-                None::<&str>,
-            )?;
-            let exit_item = MenuItem::with_id(app, "tray-exit", "退出", true, None::<&str>)?;
-            let menu = Menu::with_items(
-                app,
-                &[&show_item, &lyric_item, &lock_lyric_item, &exit_item],
-            )?;
-
-            let mut tray_builder = TrayIconBuilder::with_id("main-tray")
-                .menu(&menu)
-                // 左键单击恢复窗口，右键才弹出菜单
-                .show_menu_on_left_click(false)
-                .tooltip("AnhePlayer")
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "tray-show" => restore_main_window(app),
-                    // 只写配置，窗口由主窗口控制器统一驱动，避免双驱动
-                    "tray-desktop-lyric" => {
-                        let next = !app_config::get_config_bool("lyric.enableDesktopLyric", false);
-                        let _ = app_config::patch_config(
-                            app,
-                            serde_json::json!({ "lyric.enableDesktopLyric": next }),
-                        );
-                    }
-                    "tray-lock-lyric" => {
-                        let next = !app_config::get_config_bool("lyric.lockLyric", false);
-                        let _ = app_config::patch_config(
-                            app,
-                            serde_json::json!({ "lyric.lockLyric": next }),
-                        );
-                    }
-                    "tray-exit" => app.exit(0),
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        restore_main_window(tray.app_handle());
-                    }
-                });
-
-            if let Some(icon) = app.default_window_icon() {
-                tray_builder = tray_builder.icon(icon.clone());
-            }
-            tray_builder.build(app)?;
-
-            // 任一入口（设置页 / 主窗口 / 歌词工具栏）改动配置后，同步托盘勾选状态
-            let lyric_for_config = lyric_item.clone();
-            let lock_for_config = lock_lyric_item.clone();
-            app.listen("app-config-update", move |event| {
-                let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) else {
-                    return;
-                };
-                let Some(patch) = payload.get("patch") else {
-                    return;
-                };
-                if let Some(checked) = patch
-                    .get("lyric.enableDesktopLyric")
-                    .and_then(|v| v.as_bool())
-                {
-                    let _ = lyric_for_config.set_checked(checked);
-                }
-                if let Some(checked) = patch.get("lyric.lockLyric").and_then(|v| v.as_bool()) {
-                    let _ = lock_for_config.set_checked(checked);
-                }
-            });
-
-            // 启动时按磁盘配置对齐一次歌词窗口（隐藏状态下也会正确设置穿透与置顶）
-            let enabled = app_config::get_config_bool("lyric.enableDesktopLyric", false);
-            let always_on_top = app_config::get_config_bool("lyric.alwaysOnTop", true);
-            let locked = app_config::get_config_bool("lyric.lockLyric", false);
-            if let Err(err) = lyric_window::sync_lyric_window(
-                app.handle().clone(),
-                enabled,
-                always_on_top,
-                locked,
-            ) {
-                log::warn!("[tray] sync lyric window on startup failed: {err}");
-            }
+            #[cfg(desktop)]
+            setup_desktop(app)?;
 
             Ok(())
         })
         .on_window_event(|window, event| {
-            match window.label() {
-                // 主窗口关闭请求：按配置决定「退出」还是「隐藏到托盘」，
-                // 避免窗口被销毁后进程与音频仍在后台运行却无法找回。
-                "main" => {
-                    if let WindowEvent::CloseRequested { api, .. } = event {
-                        if read_close_behavior() == "exit_app" {
-                            window.app_handle().exit(0);
-                            return;
-                        }
-                        api.prevent_close();
-                        let _ = window.hide();
-                        let _ = window.set_skip_taskbar(true);
-                    }
-                }
-                // 歌词窗口：几何变化防抖持久化 + 关闭请求拦截
-                "lyric" => lyric_window::handle_lyric_window_event(window, event),
-                _ => {}
-            }
+            #[cfg(desktop)]
+            desktop_window_event(window, event);
+            #[cfg(mobile)]
+            let _ = (window, event);
         })
         .run(tauri::generate_context!())
         .expect("error while running anhe-player tauri application");
+}
+
+#[cfg(desktop)]
+fn setup_desktop(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    // ── 系统托盘 ──
+    // 关闭按钮在「最小化」模式下只会隐藏窗口，必须提供托盘入口将其找回。
+    let show_item = MenuItem::with_id(app, "tray-show", "显示主窗口", true, None::<&str>)?;
+    // 桌面歌词锁定时整窗鼠标穿透，托盘是唯一可靠的解锁入口
+    let lyric_item = CheckMenuItem::with_id(
+        app,
+        "tray-desktop-lyric",
+        "桌面歌词",
+        true,
+        app_config::get_config_bool("lyric.enableDesktopLyric", false),
+        None::<&str>,
+    )?;
+    let lock_lyric_item = CheckMenuItem::with_id(
+        app,
+        "tray-lock-lyric",
+        "锁定桌面歌词",
+        true,
+        app_config::get_config_bool("lyric.lockLyric", false),
+        None::<&str>,
+    )?;
+    let exit_item = MenuItem::with_id(app, "tray-exit", "退出", true, None::<&str>)?;
+    let menu = Menu::with_items(
+        app,
+        &[&show_item, &lyric_item, &lock_lyric_item, &exit_item],
+    )?;
+
+    let mut tray_builder = TrayIconBuilder::with_id("main-tray")
+        .menu(&menu)
+        // 左键单击恢复窗口，右键才弹出菜单
+        .show_menu_on_left_click(false)
+        .tooltip("AnhePlayer")
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "tray-show" => restore_main_window(app),
+            // 只写配置，窗口由主窗口控制器统一驱动，避免双驱动
+            "tray-desktop-lyric" => {
+                let next = !app_config::get_config_bool("lyric.enableDesktopLyric", false);
+                let _ = app_config::patch_config(
+                    app,
+                    serde_json::json!({ "lyric.enableDesktopLyric": next }),
+                );
+            }
+            "tray-lock-lyric" => {
+                let next = !app_config::get_config_bool("lyric.lockLyric", false);
+                let _ =
+                    app_config::patch_config(app, serde_json::json!({ "lyric.lockLyric": next }));
+            }
+            "tray-exit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                restore_main_window(tray.app_handle());
+            }
+        });
+
+    if let Some(icon) = app.default_window_icon() {
+        tray_builder = tray_builder.icon(icon.clone());
+    }
+    tray_builder.build(app)?;
+
+    // 任一入口（设置页 / 主窗口 / 歌词工具栏）改动配置后，同步托盘勾选状态
+    let lyric_for_config = lyric_item.clone();
+    let lock_for_config = lock_lyric_item.clone();
+    app.listen("app-config-update", move |event| {
+        let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) else {
+            return;
+        };
+        let Some(patch) = payload.get("patch") else {
+            return;
+        };
+        if let Some(checked) = patch
+            .get("lyric.enableDesktopLyric")
+            .and_then(|v| v.as_bool())
+        {
+            let _ = lyric_for_config.set_checked(checked);
+        }
+        if let Some(checked) = patch.get("lyric.lockLyric").and_then(|v| v.as_bool()) {
+            let _ = lock_for_config.set_checked(checked);
+        }
+    });
+
+    // 启动时按磁盘配置对齐一次歌词窗口（隐藏状态下也会正确设置穿透与置顶）
+    let enabled = app_config::get_config_bool("lyric.enableDesktopLyric", false);
+    let always_on_top = app_config::get_config_bool("lyric.alwaysOnTop", true);
+    let locked = app_config::get_config_bool("lyric.lockLyric", false);
+    if let Err(err) =
+        lyric_window::sync_lyric_window(app.handle().clone(), enabled, always_on_top, locked)
+    {
+        log::warn!("[tray] sync lyric window on startup failed: {err}");
+    }
+
+    Ok(())
+}
+
+#[cfg(desktop)]
+fn desktop_window_event(window: &tauri::Window, event: &WindowEvent) {
+    match window.label() {
+        // 主窗口关闭请求：按配置决定「退出」还是「隐藏到托盘」，
+        // 避免窗口被销毁后进程与音频仍在后台运行却无法找回。
+        "main" => {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if read_close_behavior() == "exit_app" {
+                    window.app_handle().exit(0);
+                    return;
+                }
+                api.prevent_close();
+                let _ = window.hide();
+                let _ = window.set_skip_taskbar(true);
+            }
+        }
+        // 歌词窗口：几何变化防抖持久化 + 关闭请求拦截
+        "lyric" => lyric_window::handle_lyric_window_event(window, event),
+        _ => {}
+    }
 }

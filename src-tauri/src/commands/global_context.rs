@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use tauri::Manager;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -25,16 +24,11 @@ pub struct GlobalContext {
 
 #[tauri::command]
 pub fn global_context_get(app: tauri::AppHandle) -> GlobalContext {
-    let download_dir = dirs::download_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
+    let download_dir = super::paths::download_dir(&app)
         .to_string_lossy()
         .to_string();
 
-    let config_dir = dirs::config_dir()
-        .map(|p| p.join("AnhePlayer"))
-        .unwrap_or_else(|| PathBuf::from("."))
-        .to_string_lossy()
-        .to_string();
+    let config_dir = super::paths::user_data_dir().to_string_lossy().to_string();
 
     let temp_dir = std::env::temp_dir().to_string_lossy().to_string();
 

@@ -1,0 +1,19 @@
+{
+    "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/v2.0/crates/tauri-config-schema/schema.json",
+    "app": {
+        "windows": [
+            {
+                "label": "main",
+                "title": "AnhePlayer",
+                "url": "/mainWindow.html",
+                "backgroundColor": "#121212",
+                "dragDropEnabled": false
+            }
+        ]
+    },
+    "bundle": {
+        "iOS": {
+            "minimumSystemVersion": "15.0"
+        }
+    }
+}
