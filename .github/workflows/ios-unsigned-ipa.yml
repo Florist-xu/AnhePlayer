@@ -1,0 +1,146 @@
+name: iOS Unsigned IPA
+
+# 构建「未签名」的 .ipa，用于 Sideloadly / AltStore 等工具用免费 Apple ID 重新签名后侧载。
+# 不需要付费开发者账号，不需要任何 secrets。侧载证书 7 天过期，需定期重装。
+#
+# 为什么不用 `tauri ios build`：它必须有签名团队；而直接跑 xcodebuild 又会因为 Xcode 的
+# 「Build Rust Code」前置脚本依赖 tauri CLI 的运行时选项而失败。
+# 所以这里：自己编译 Rust 静态库 → 去掉前置脚本 → 关闭签名 xcodebuild → 手工打包 IPA。
+# 该流程尚未实际跑通，首次运行预期需要根据日志（尤其是被打印出来的 project.yml）微调。
+
+on:
+    workflow_dispatch:
+
+jobs:
+    unsigned-ipa:
+        runs-on: macos-latest
+        env:
+            IPHONEOS_DEPLOYMENT_TARGET: '15.0'
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 9
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: 'pnpm'
+
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: aarch64-apple-ios
+
+            - uses: swatinem/rust-cache@v2
+              with:
+                  workspaces: src-tauri
+
+            - name: Install frontend dependencies
+              run: pnpm install --frozen-lockfile
+
+            # tauri-build 需要 ../dist 存在，且前端资源会被嵌入 Rust 库
+            - name: Build frontend
+              run: pnpm build:tauri-prepare
+
+            - name: Generate Xcode project
+              run: pnpm tauri ios init --ci
+
+            - name: Show generated project (diagnostics)
+              working-directory: src-tauri/gen/apple
+              run: |
+                  ls -la
+                  echo "----- project.yml -----"
+                  cat project.yml
+                  echo "----- Info.plist -----"
+                  find . -name Info.plist -not -path './build/*' -exec sh -c 'echo "## $1"; cat "$1"' _ {} \;
+
+            # release 构建必须启用 custom-protocol，否则应用会去连 devUrl 而不是加载内置前端
+            - name: Build Rust static library
+              working-directory: src-tauri
+              run: cargo build --release --target aarch64-apple-ios --lib --features tauri/custom-protocol
+
+            - name: Place library where Xcode expects it
+              run: |
+                  LIB=$(ls src-tauri/target/aarch64-apple-ios/release/lib*.a | head -n 1)
+                  echo "Rust lib: $LIB"
+                  DEST=src-tauri/gen/apple/Externals/arm64/release
+                  mkdir -p "$DEST"
+                  cp "$LIB" "$DEST/libapp.a"
+                  # Xcode 也可能按 debug 路径找，保险起见两处都放
+                  mkdir -p src-tauri/gen/apple/Externals/arm64/debug
+                  cp "$LIB" src-tauri/gen/apple/Externals/arm64/debug/libapp.a
+                  ls -R src-tauri/gen/apple/Externals
+
+            # 去掉依赖 tauri CLI 运行时的前置脚本，改用上面预编译好的库
+            - name: Strip Rust pre-build script and regenerate project
+              working-directory: src-tauri/gen/apple
+              run: |
+                  python3 - <<'PY'
+                  import re
+                  src = open('project.yml', encoding='utf-8').read().split('\n')
+                  out, skipping, base = [], False, 0
+                  for line in src:
+                      stripped = line.lstrip()
+                      indent = len(line) - len(stripped)
+                      if not skipping and stripped.startswith('preBuildScripts:'):
+                          skipping, base = True, indent
+                          continue
+                      if skipping:
+                          if stripped == '' or indent > base:
+                              continue
+                          skipping = False
+                      out.append(line)
+                  open('project.yml', 'w', encoding='utf-8').write('\n'.join(out))
+                  PY
+                  grep -n "preBuildScripts" project.yml || echo "preBuildScripts removed"
+                  xcodegen generate
+
+            # xcodegen 会按 project.yml 重写 Info.plist，所以合并自定义键必须在它之后
+            - name: Merge Info.ios.plist
+              run: |
+                  python3 - <<'PY'
+                  import glob, plistlib
+                  extra = plistlib.load(open('src-tauri/Info.ios.plist', 'rb'))
+                  targets = [p for p in glob.glob('src-tauri/gen/apple/**/Info.plist', recursive=True) if '/build/' not in p]
+                  assert targets, 'no generated Info.plist found'
+                  for path in targets:
+                      data = plistlib.load(open(path, 'rb'))
+                      data.update(extra)
+                      plistlib.dump(data, open(path, 'wb'))
+                      print('merged into', path, '->', sorted(data.keys()))
+                  PY
+
+            - name: Build .app without code signing
+              working-directory: src-tauri/gen/apple
+              run: |
+                  XCPROJ=$(ls -d *.xcodeproj | head -n 1)
+                  SCHEME=$(xcodebuild -list -project "$XCPROJ" | awk '/Schemes:/{f=1;next} f&&NF{print $1; exit}')
+                  echo "project=$XCPROJ scheme=$SCHEME"
+                  xcodebuild \
+                    -project "$XCPROJ" \
+                    -scheme "$SCHEME" \
+                    -configuration release \
+                    -sdk iphoneos \
+                    -arch arm64 \
+                    -derivedDataPath build \
+                    CODE_SIGNING_ALLOWED=NO \
+                    CODE_SIGNING_REQUIRED=NO \
+                    CODE_SIGN_IDENTITY="" \
+                    build
+
+            - name: Package IPA
+              run: |
+                  APP=$(find src-tauri/gen/apple/build -type d -name '*.app' -path '*release-iphoneos*' | head -n 1)
+                  echo "App bundle: $APP"
+                  test -n "$APP"
+                  rm -rf Payload && mkdir Payload
+                  cp -R "$APP" Payload/
+                  zip -qry AnhePlayer-unsigned.ipa Payload
+                  ls -lh AnhePlayer-unsigned.ipa
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: AnhePlayer-unsigned-ipa
+                  path: AnhePlayer-unsigned.ipa
+                  retention-days: 14
