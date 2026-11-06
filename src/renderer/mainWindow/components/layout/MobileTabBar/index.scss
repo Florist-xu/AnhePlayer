@@ -1,0 +1,44 @@
+// ============================================================================
+// MobileTabBar — 移动端底部导航样式
+// ============================================================================
+
+.l-mobile-tabbar {
+    display: none; // 仅在 [data-platform='ios'] 下显示
+
+    &__item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+
+        &.is-active {
+            color: var(--color-text-brand);
+        }
+    }
+
+    &__label {
+        font-size: 10px;
+        line-height: 1.2;
+    }
+}
+
+[data-platform='ios'] .l-mobile-tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-player);
+    display: flex;
+    height: calc(var(--size-tabbar-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background-color: var(--color-bg-player);
+    backdrop-filter: blur(var(--blur-xl));
+    border-top: 1px solid var(--color-border-default);
+}

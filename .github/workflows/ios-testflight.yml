@@ -1,0 +1,100 @@
+name: iOS TestFlight (draft)
+
+# 草稿：打包签名后的 .ipa 并上传 TestFlight。仅手动触发。
+# 运行前必须在仓库 Settings → Secrets and variables → Actions 配置下列 secrets，
+# 并在 src-tauri/tauri.conf.json 的 bundle.iOS.developmentTeam 或 APPLE_DEVELOPMENT_TEAM 里填团队 ID。
+#
+#   APPLE_CERTIFICATE            Apple Distribution 证书 (.p12) 的 base64
+#   APPLE_CERTIFICATE_PASSWORD   .p12 密码
+#   APPLE_PROVISIONING_PROFILE   App Store 类型描述文件 (.mobileprovision) 的 base64
+#   APPLE_DEVELOPMENT_TEAM       团队 ID（10 位）
+#   APPSTORE_ISSUER_ID           App Store Connect API Issuer ID
+#   APPSTORE_API_KEY_ID          API Key ID
+#   APPSTORE_API_PRIVATE_KEY     API 私钥 (.p8) 的文本内容
+#
+# bundle id 为 com.anhe.player，需先在 App Store Connect 建好同名 App。
+# 该流程尚未实际跑通，首次运行预期需要根据日志微调。
+
+on:
+    workflow_dispatch:
+
+jobs:
+    testflight:
+        runs-on: macos-latest
+        env:
+            APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 9
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: 'pnpm'
+
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: aarch64-apple-ios
+
+            - uses: swatinem/rust-cache@v2
+              with:
+                  workspaces: src-tauri
+
+            - name: Import signing certificate
+              env:
+                  CERT_BASE64: ${{ secrets.APPLE_CERTIFICATE }}
+                  CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+              run: |
+                  KEYCHAIN=build.keychain
+                  KEYCHAIN_PASSWORD=$(uuidgen)
+                  echo "$CERT_BASE64" | base64 --decode > cert.p12
+                  security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN
+                  security set-keychain-settings -lut 21600 $KEYCHAIN
+                  security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN
+                  security import cert.p12 -k $KEYCHAIN -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+                  security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN
+                  security list-keychains -d user -s $KEYCHAIN login.keychain
+                  rm cert.p12
+
+            - name: Install provisioning profile
+              env:
+                  PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+              run: |
+                  mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+                  echo "$PROFILE_BASE64" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/build.mobileprovision"
+
+            - name: Install frontend dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Init iOS project
+              run: pnpm tauri ios init --ci
+
+            - name: Build signed IPA
+              run: pnpm tauri ios build --export-method app-store-connect
+
+            - name: Locate IPA
+              id: ipa
+              run: |
+                  IPA=$(find src-tauri/gen/apple -name '*.ipa' | head -n 1)
+                  echo "path=$IPA" >> "$GITHUB_OUTPUT"
+                  echo "Found: $IPA"
+
+            - name: Upload to TestFlight
+              env:
+                  ISSUER: ${{ secrets.APPSTORE_ISSUER_ID }}
+                  KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+                  PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+              run: |
+                  mkdir -p ~/.appstoreconnect/private_keys
+                  echo "$PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+                  xcrun altool --upload-app --type ios \
+                    --file "${{ steps.ipa.outputs.path }}" \
+                    --apiKey "$KEY_ID" --apiIssuer "$ISSUER"
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: ios-ipa
+                  path: ${{ steps.ipa.outputs.path }}

@@ -2,6 +2,7 @@
  * Tauri 桥接：globalContext
  */
 import { CONTEXT_BRIDGE_KEY } from '@infra/globalContext/common/constant';
+import { fallbackPlatform, isMobile } from '@common/platform';
 import { tauriInvoke } from '../ipc';
 
 const defaultContext = {
@@ -12,8 +13,9 @@ const defaultContext = {
         userData: 'C:\\Users\\Administrator\\AppData\\Roaming\\AnhePlayer',
         res: '',
     },
-    platform: 'win32',
-    isWin10OrAbove: true,
+    // 同步兜底；Rust 回填后以真实值（std::env::consts::OS）覆盖
+    platform: fallbackPlatform,
+    isWin10OrAbove: !isMobile,
 };
 
 // ─── 就绪信号（Rust 回填真实路径/版本完成） ───

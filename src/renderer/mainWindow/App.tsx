@@ -15,9 +15,11 @@
 
 import { Outlet, useLocation } from 'react-router';
 import { cn } from '@common/cn';
+import { isMobile } from '@common/platform';
 import { RoutePaths } from './routes';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
+import MobileTabBar from './components/layout/MobileTabBar';
 import PlayerBar from './components/layout/PlayerBar';
 import QueueDrawer from './components/layout/QueueDrawer';
 import FullscreenPlayer from './components/layout/FullscreenPlayer';
@@ -37,7 +39,7 @@ export default function App() {
 
     return (
         <div className={cn('l-app-shell', isRadioPage && 'l-app-shell--immersive-radio')}>
-            <Sidebar />
+            {isMobile ? <MobileTabBar /> : <Sidebar />}
             <main className="l-app-shell__main">
                 <TopBar />
                 <div

@@ -80,3 +80,52 @@
         overflow: hidden !important;
     }
 }
+
+// ─── 移动端（iOS）覆盖 ───
+// 通过 <html data-platform="ios"> 启用。桌面端不受影响。
+
+[data-platform='ios'] {
+    --size-tabbar-h: 52px;
+    --size-topbar-h: 52px;
+    --size-player-h: 64px;
+    // 播放栏悬浮在 TabBar 之上
+    --size-mobile-bottom: calc(var(--size-tabbar-h) + env(safe-area-inset-bottom));
+
+    body {
+        overscroll-behavior: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+    }
+
+    .l-app-shell {
+        width: 100%;
+        height: 100dvh;
+        padding-top: env(safe-area-inset-top);
+        box-sizing: border-box;
+    }
+
+    .l-app-shell__content {
+        padding: 0 var(--space-4);
+        scrollbar-gutter: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: calc(var(--size-mobile-bottom) + var(--size-player-h) + var(--space-2));
+    }
+
+    // 桌面专属控件
+    .l-topbar__nav,
+    .l-topbar__window-controls,
+    .l-topbar__drag-region {
+        display: none !important;
+    }
+
+    .l-topbar {
+        padding: 0 var(--space-4);
+    }
+
+    // 播放栏：占满宽度，坐在 TabBar 上方
+    .l-player-bar {
+        left: 0;
+        bottom: var(--size-mobile-bottom);
+    }
+}

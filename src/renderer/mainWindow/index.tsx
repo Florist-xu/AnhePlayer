@@ -4,10 +4,13 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 
+import { isMobile } from '@common/platform';
 import bootstrapMainWindow from '../bootstrap/mainWindow';
 import router from './router';
 
 document.body.dataset.window = 'main';
+// 供样式区分平台：[data-platform='ios'] 走移动端布局
+document.documentElement.dataset.platform = isMobile ? 'ios' : 'desktop';
 
 const container = document.getElementById('root');
 if (!container) {
